@@ -13,7 +13,8 @@ use std::{
 
 type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
-const MODEL_DIR: &str = "nemotron-speech-streaming-en-0.6b";
+// Nemotron
+const MODEL_DIR: &str = "nemotron-speech-streaming-en-0.6b-int4";
 const TARGET_HZ: u32 = 16_000;
 const CHUNK_SAMPLES: usize = 8_960; // 560ms at 16 kHz
 

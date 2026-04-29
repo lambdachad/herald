@@ -2,10 +2,17 @@
 
 Real-time, streaming speech-to-text in the terminal. Runs fully offline using NVIDIA's Nemotron model via ONNX Runtime.
 
-## Download the model
+## Download model
 
 ```sh
-hf download altunenes/parakeet-rs --include "nemotron-speech-streaming-en-0.6b/*" --local-dir ./
+# FP32
+hf download altunenes/parakeet-rs --include "nemotron-speech-streaming-en-0.6b/*" --local-dir ./nemotron-speech-streaming-en-0.6b
+
+# INT8
+hf download lokkju/nemotron-speech-streaming-en-0.6b-int8 --local-dir ./nemotron-speech-streaming-en-0.6b-int8
+
+# INT4
+hf download lokkju/nemotron-speech-streaming-en-0.6b-int4 --local-dir ./nemotron-speech-streaming-en-0.6b-int4
 ```
 
 ## Build and run
