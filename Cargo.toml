@@ -6,4 +6,4 @@ edition = "2024"
 [dependencies]
 ctrlc = "3"
 cpal = "0.17"
-parakeet-rs = "0.3"
+parakeet-rs = { version = "0.3", features = ["load-dynamic", "cuda"] }
