@@ -1,0 +1,10 @@
+[package]
+name = "voice"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cpal = "0.15"
+anyhow = "1"
+ctrlc = "3"
+parakeet-rs = "0.3"
