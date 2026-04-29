@@ -1,16 +1,17 @@
-use anyhow::{anyhow, Context, Result};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Sample, SampleFormat, SampleRate, Stream, StreamConfig};
+use cpal::{Sample, SampleFormat, Stream, StreamConfig};
 use parakeet_rs::Nemotron;
 use std::time::Duration;
 use std::{
-    io::Write as _,
+    io::Write,
     sync::{
         atomic::{AtomicBool, Ordering},
         mpsc::{self, Receiver, RecvTimeoutError, Sender},
         Arc,
     },
 };
+
+type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
 // Nemotron
 const MODEL_DIR: &str = "./nemotron";
@@ -46,7 +47,7 @@ fn main() -> Result<()> {
             let chunk = buffer.drain(..CHUNK_SAMPLES).collect::<Vec<_>>();
             let text = model
                 .transcribe_chunk(&chunk)
-                .map_err(|e| anyhow!("Transcription failed: {e}"))?;
+                .map_err(|e| format!("Transcription failed: {e}"))?;
             if !text.is_empty() {
                 print!("{text}");
                 std::io::stdout().flush()?;
@@ -59,21 +60,22 @@ fn main() -> Result<()> {
 fn open_input_stream() -> Result<(Stream, Receiver<Vec<f32>>)> {
     let device = cpal::default_host()
         .default_input_device()
-        .context("No input device found")?;
+        .ok_or("No input device found")?;
 
     // Pick config that supports 16 kHz, fewest channels, prefer f32
-    let rate = SampleRate(TARGET_HZ);
     let supported = device
         .supported_input_configs()?
-        .filter(|config| config.min_sample_rate() <= rate && config.max_sample_rate() >= rate)
+        .filter(|config| {
+            config.min_sample_rate() <= TARGET_HZ && config.max_sample_rate() >= TARGET_HZ
+        })
         .min_by_key(|config| {
             (
                 config.channels() as u32,
                 (config.sample_format() != SampleFormat::F32) as u32,
             )
         })
-        .context(format!("Device does not support {TARGET_HZ} Hz"))?
-        .with_sample_rate(rate);
+        .ok_or(format!("Device does not support {TARGET_HZ} Hz"))?
+        .with_sample_rate(TARGET_HZ);
 
     // Build stream with config
     let channels = supported.channels() as usize;
@@ -84,7 +86,7 @@ fn open_input_stream() -> Result<(Stream, Receiver<Vec<f32>>)> {
         SampleFormat::F32 => build_stream::<f32>(&device, &config, channels, sender)?,
         SampleFormat::I16 => build_stream::<i16>(&device, &config, channels, sender)?,
         SampleFormat::U16 => build_stream::<u16>(&device, &config, channels, sender)?,
-        other => return Err(anyhow!("Unsupported sample format: {other:?}")),
+        other => return Err(format!("Unsupported sample format: {other:?}").into()),
     };
     Ok((stream, receiver))
 }
