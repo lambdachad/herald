@@ -5,7 +5,7 @@ Real-time, streaming speech-to-text in the terminal. Runs fully offline using NV
 ## Download the model
 
 ```sh
-hf download lokkju/nemotron-speech-streaming-en-0.6b-int8 --local-dir ./nemotron
+hf download altunenes/parakeet-rs --include "nemotron-speech-streaming-en-0.6b/*" --local-dir ./
 ```
 
 ## Build and run
@@ -21,4 +21,4 @@ Speak into your default microphone. Transcribed text streams to stdout in real t
 | Crate | Purpose |
 |---|---|
 | `cpal` | Cross-platform audio capture |
-| `parakeet-rs` | Nemotron/Parakeet streaming ASR inference |
+| `parakeet-rs` | Nemotron streaming ASR inference |
