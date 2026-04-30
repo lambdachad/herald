@@ -12,11 +12,15 @@ use transcribe::Transcriber;
 const BACKGROUND: egui::Color32 = egui::Color32::from_rgb(28, 28, 28);
 const PRIMARY: egui::Color32 = egui::Color32::from_rgb(0xC2, 0xFF, 0x50);
 
-// Aliases
-pub type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
+#[derive(PartialEq)]
+enum State {
+    Hidden,
+    Recording,
+    Processing,
+}
 
 pub struct App {
-    visible: bool,
+    state: State,
     input: Receiver<bool>,
     transcriber: Transcriber,
 }
@@ -26,7 +30,7 @@ impl App {
         Self {
             transcriber,
             input,
-            visible: false,
+            state: State::Hidden,
         }
     }
 }
@@ -40,38 +44,48 @@ impl eframe::App for App {
         // Process input events from devices
         loop {
             match self.input.try_recv() {
-                Ok(true) if !self.visible => self.visible = true,
-                Ok(false) if self.visible => self.visible = false,
+                Ok(true) if self.state != State::Recording => {
+                    self.state = State::Recording;
+                }
+                Ok(false) if self.state == State::Recording => {
+                    self.state = State::Processing;
+                }
                 Ok(_) => {}
                 Err(_) => break,
             }
         }
 
-        if self.visible {
-            // Poll audio device
-            match self.transcriber.poll() {
-                Ok(text) if !text.is_empty() => {
-                    print!("{text}");
-                    let _ = std::io::stdout().flush();
-                }
-                Err(e) => eprintln!("Transcription error: {e}"),
-                _ => {}
-            }
+        // Poll audio device
+        if let Ok(text) = self.transcriber.poll() {
+            print!("{text}");
+            let _ = std::io::stdout().flush();
+        }
 
-            // Render UI
-            ui.ctx().request_repaint();
-            let levels = self.transcriber.levels();
-            egui::CentralPanel::default()
-                .frame(egui::Frame::new().inner_margin(egui::Margin::ZERO))
-                .show_inside(ui, |ui| {
-                    let rect = ui.available_rect_before_wrap();
-                    let rounding = rect.height() / 2.0;
-                    ui.painter().rect_filled(rect, rounding, BACKGROUND);
-                    draw_waveform(ui, &rect, &levels, PRIMARY);
-                });
-        } else {
-            // Drain audio stream 
-            self.transcriber.drain();
+        // Update based on state
+        match self.state {
+            State::Hidden => self.transcriber.drain(),
+            State::Recording => {
+                ui.ctx().request_repaint();
+                let levels = self.transcriber.levels();
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::new().inner_margin(egui::Margin::ZERO))
+                    .show_inside(ui, |ui| {
+                        let rect = ui.available_rect_before_wrap();
+                        let rounding = rect.height() / 2.0;
+                        ui.painter().rect_filled(rect, rounding, BACKGROUND);
+                        draw_waveform(ui, &rect, &levels, PRIMARY);
+                    });
+            }
+            State::Processing => {
+                ui.ctx().request_repaint();
+                let rect = ui.available_rect_before_wrap();
+                let rounding = rect.height() / 2.0;
+                ui.painter().rect_filled(rect, rounding, BACKGROUND);
+                draw_processing(ui, &rect);
+                if !self.transcriber.has_pending() {
+                    self.state = State::Hidden;
+                }
+            }
         }
     }
 }
@@ -94,5 +108,22 @@ fn draw_waveform(ui: &mut egui::Ui, rect: &egui::Rect, levels: &[f32], color: eg
             egui::vec2(bar_w, h),
         );
         ui.painter().rect_filled(bar_rect, bar_w / 2.0, color);
+    }
+}
+
+fn draw_processing(ui: &mut egui::Ui, rect: &egui::Rect) {
+    let dot_radius = 3.0;
+    let dot_gap = 8.0;
+    let total_w = 3.0 * dot_radius * 2.0 + 2.0 * dot_gap;
+    let start_x = rect.center().x - total_w / 2.0;
+    let center_y = rect.center().y;
+
+    for i in 0..3 {
+        let x = start_x + i as f32 * (dot_radius * 2.0 + dot_gap) + dot_radius;
+        let pulse = ((ui.ctx().input(|i| i.time) * 3.0 + i as f64 * 1.2).sin() + 1.0) / 2.0;
+        let alpha = (0.3 + pulse * 0.7) * 255.0;
+        let color = egui::Color32::from_rgba_unmultiplied(0xC2, 0xFF, 0x50, alpha as u8);
+        ui.painter()
+            .circle_filled(egui::pos2(x, center_y), dot_radius, color);
     }
 }

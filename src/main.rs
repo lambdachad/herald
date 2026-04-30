@@ -1,14 +1,15 @@
+use anyhow::Result;
 use eframe::egui;
-use herald::{input, transcribe::Transcriber, App, Result};
+use herald::{input, transcribe::Transcriber, App};
 
 fn main() -> Result<()> {
-    // Setup
+    // Setup model and key listener
     let transcriber = Transcriber::new()?;
-    println!("Finishied loading model.");
+    println!("Ready...");
     let input = input::listen_keys();
 
     // Start eGUI app
-    Ok(eframe::run_native(
+    eframe::run_native(
         "Herald",
         eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
@@ -20,5 +21,6 @@ fn main() -> Result<()> {
             ..Default::default()
         },
         Box::new(move |_cc| Ok(Box::new(App::new(transcriber, input)))),
-    )?)
+    )
+    .map_err(|err| anyhow::anyhow!("{err}"))
 }
