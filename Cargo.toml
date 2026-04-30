@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ctrlc = "3"
 cpal = "0.17"
+ctrlc = "3"
 parakeet-rs = "0.3"
+eframe = { version = "0.34", default-features = false, features = ["wayland", "glow"] }
