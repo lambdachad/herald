@@ -1,12 +1,14 @@
 use anyhow::Result;
 use eframe::egui;
 use herald::{input, transcribe::Transcriber, App};
+use spinners::{Spinner, Spinners};
 
 fn main() -> Result<()> {
     // Setup model and key listener
+    let mut sp = Spinner::new(Spinners::Dots9, "Loading model...".into());
     let transcriber = Transcriber::new()?;
-    println!("Ready...");
     let input = input::listen_keys();
+    sp.stop_and_persist("✔", "Finished loading model!".into());
 
     // Start eGUI app
     eframe::run_native(
