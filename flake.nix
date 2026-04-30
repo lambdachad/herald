@@ -14,7 +14,7 @@
             openssl
             wayland
             libGL
-            libxkbcommon1
+            libxkbcommon
           ]; 
       in {
         devShells.default = pkgs.mkShell {
