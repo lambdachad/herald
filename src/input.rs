@@ -8,9 +8,8 @@ pub fn listen_keys() -> Receiver<bool> {
     let keyboards = evdev::enumerate()
         .filter(|(_, dev)| dev.supported_events().contains(EventType::KEY))
         .filter(|(_, dev)| {
-            dev.supported_keys().map_or(false, |keys| {
-                keys.contains(KeyCode::KEY_LEFTMETA) || keys.contains(KeyCode::KEY_RIGHTMETA)
-            })
+            dev.supported_keys()
+                .map_or(false, |keys| keys.contains(KeyCode::KEY_RIGHTALT))
         })
         .map(|(_, dev)| dev)
         .collect::<Vec<_>>();
@@ -20,10 +19,7 @@ pub fn listen_keys() -> Receiver<bool> {
         let tx = tx.clone();
         thread::spawn(move || loop {
             for event in dev.fetch_events().unwrap() {
-                if event.event_type() == EventType::KEY
-                    && (event.code() == KeyCode::KEY_LEFTMETA.0
-                        || event.code() == KeyCode::KEY_RIGHTMETA.0)
-                {
+                if event.event_type() == EventType::KEY && event.code() == KeyCode::KEY_RIGHTALT.0 {
                     let _ = tx.send(match event.value() {
                         1 => true,
                         0 => false,
