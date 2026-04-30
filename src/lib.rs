@@ -21,6 +21,7 @@ pub struct App {
     state: State,
     input: Receiver<bool>,
     transcriber: Transcriber,
+    first_text: bool,
 }
 
 impl App {
@@ -29,6 +30,7 @@ impl App {
             transcriber,
             input,
             state: State::Hidden,
+            first_text: true,
         }
     }
 }
@@ -42,7 +44,10 @@ impl eframe::App for App {
         // Process input events from devices
         loop {
             match self.input.try_recv() {
-                Ok(true) if self.state != State::Recording => self.state = State::Recording,
+                Ok(true) if self.state != State::Recording => {
+                    self.state = State::Recording;
+                    self.first_text = true;
+                }
                 Ok(false) if self.state == State::Recording => self.state = State::Hidden,
                 Ok(_) => {}
                 Err(_) => break,
@@ -51,6 +56,12 @@ impl eframe::App for App {
 
         // Poll audio device and stream text via wtype
         if let Ok(text) = self.transcriber.poll() && !text.is_empty() {
+            let text = if self.first_text {
+                self.first_text = false;
+                text.trim_start().to_string()
+            } else {
+                text
+            };
             let _ = Command::new("wtype").arg(&text).spawn();
         }
 
