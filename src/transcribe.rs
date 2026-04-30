@@ -170,7 +170,6 @@ where
                     }
                 }
             }
-
             let _ = sender.send(mono);
         },
         |err| eprintln!("Audio error: {err}"),
