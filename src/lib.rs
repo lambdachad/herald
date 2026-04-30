@@ -62,13 +62,11 @@ impl eframe::App for App {
                 self.transcribed_text.push_str(&text);
             }
         }
-        
+
         // Update based on state
         ui.ctx().request_repaint();
         match self.state {
-            State::Hidden => {
-                self.transcriber.drain()
-            }
+            State::Hidden => self.transcriber.drain(),
             State::Recording => {
                 let levels = self.transcriber.levels();
                 egui::CentralPanel::default()
@@ -86,11 +84,10 @@ impl eframe::App for App {
                 ui.painter().rect_filled(rect, rounding, BACKGROUND);
                 draw_processing(ui, &rect);
                 if !self.transcriber.has_pending() {
-                    let trimmed = self.transcribed_text.trim().to_string();
+                    let trimmed = self.transcribed_text.trim();
                     if !trimmed.is_empty() {
-                        if let Err(e) = Command::new("wtype").arg(trimmed).output() {
-                            eprintln!("Failed to type with wtype: {e}");
-                        }
+                        let _ = Command::new("wl-copy").arg(&trimmed).spawn();
+                        let _ = Command::new("wtype").args(["-M", "ctrl", "-k", "v", "-m", "ctrl"]).spawn();
                         self.transcribed_text.clear();
                     }
                     self.state = State::Hidden;
