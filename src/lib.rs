@@ -1,5 +1,7 @@
 // Modules
 pub mod app;
+pub mod input;
+pub mod niri;
 pub mod transcribe;
 
 // Exports

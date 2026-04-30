@@ -1,10 +1,10 @@
 use eframe::egui;
-use herald::{app::App, transcribe::Transcriber, Result};
+use herald::{app::App, input, transcribe::Transcriber, Result};
 
 fn main() -> Result<()> {
-    // Load model and start audio capture
-    let mut transcriber = Transcriber::new()?;
-    transcriber.start_capture()?;
+    // Load model
+    let transcriber = Transcriber::new()?;
+    let input_rx = input::spawn_key_watcher();
 
     // Window options
     let options = eframe::NativeOptions {
@@ -21,6 +21,6 @@ fn main() -> Result<()> {
     Ok(eframe::run_native(
         "Herald",
         options,
-        Box::new(move |_cc| Ok(Box::new(App::new(transcriber)))),
+        Box::new(move |_cc| Ok(Box::new(App::new(transcriber, input_rx)))),
     )?)
 }
