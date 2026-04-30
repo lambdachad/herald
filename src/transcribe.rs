@@ -1,12 +1,12 @@
 use crate::Result;
 use cpal::{
-    Sample, SampleFormat, Stream, StreamConfig,
     traits::{DeviceTrait, HostTrait, StreamTrait},
+    Sample, SampleFormat, Stream, StreamConfig,
 };
 use parakeet_rs::Nemotron;
 use std::sync::{
-    Arc, Mutex,
     mpsc::{self, Receiver, Sender},
+    Arc, Mutex,
 };
 
 // Nemotron
@@ -15,8 +15,7 @@ const TARGET_HZ: u32 = 16_000;
 const CHUNK_SAMPLES: usize = 8_960; // 560ms at 16 kHz
 const NUM_BARS: usize = 10;
 
-/// Shared amplitude levels for waveform rendering
-pub type Levels = Arc<Mutex<Vec<f32>>>;
+type Levels = Arc<Mutex<Vec<f32>>>;
 
 pub struct Transcriber {
     model: Nemotron,
@@ -81,12 +80,9 @@ impl Transcriber {
         Ok(output)
     }
 
-    pub fn levels(&self) -> Levels {
-        self.levels.clone()
-    }
-
-    pub fn is_recording(&self) -> bool {
-        self.stream.is_some()
+    /// Snapshot of current amplitude levels for waveform rendering
+    pub fn levels(&self) -> Vec<f32> {
+        self.levels.lock().map(|l| l.clone()).unwrap_or_default()
     }
 }
 

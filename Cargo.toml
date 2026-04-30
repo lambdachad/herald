@@ -5,6 +5,5 @@ edition = "2024"
 
 [dependencies]
 cpal = "0.17"
-ctrlc = "3"
 parakeet-rs = "0.3"
 eframe = { version = "0.34", default-features = false, features = ["wayland", "glow"] }
