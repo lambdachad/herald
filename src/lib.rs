@@ -4,8 +4,7 @@ pub mod transcribe;
 
 // Imports
 use eframe::egui;
-use std::io::Write;
-use std::sync::mpsc::Receiver;
+use std::{process::Command, sync::mpsc::Receiver};
 use transcribe::Transcriber;
 
 // Theme
@@ -23,6 +22,7 @@ pub struct App {
     state: State,
     input: Receiver<bool>,
     transcriber: Transcriber,
+    transcribed_text: String,
 }
 
 impl App {
@@ -31,6 +31,7 @@ impl App {
             transcriber,
             input,
             state: State::Hidden,
+            transcribed_text: String::new(),
         }
     }
 }
@@ -57,8 +58,9 @@ impl eframe::App for App {
 
         // Poll audio device
         if let Ok(text) = self.transcriber.poll() {
-            print!("{text}");
-            let _ = std::io::stdout().flush();
+            if !text.is_empty() {
+                self.transcribed_text.push_str(&text);
+            }
         }
 
         // Update based on state
@@ -83,6 +85,13 @@ impl eframe::App for App {
                 ui.painter().rect_filled(rect, rounding, BACKGROUND);
                 draw_processing(ui, &rect);
                 if !self.transcriber.has_pending() {
+                    let trimmed = self.transcribed_text.trim().to_string();
+                    if !trimmed.is_empty() {
+                        if let Err(e) = Command::new("wtype").arg(trimmed).output() {
+                            eprintln!("Failed to type with wtype: {e}");
+                        }
+                        self.transcribed_text.clear();
+                    }
                     self.state = State::Hidden;
                 }
             }
