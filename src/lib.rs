@@ -15,14 +15,12 @@ const PRIMARY: egui::Color32 = egui::Color32::from_rgb(0xC2, 0xFF, 0x50);
 enum State {
     Hidden,
     Recording,
-    Processing,
 }
 
 pub struct App {
     state: State,
     input: Receiver<bool>,
     transcriber: Transcriber,
-    transcribed_text: String,
 }
 
 impl App {
@@ -31,7 +29,6 @@ impl App {
             transcriber,
             input,
             state: State::Hidden,
-            transcribed_text: String::new(),
         }
     }
 }
@@ -45,22 +42,16 @@ impl eframe::App for App {
         // Process input events from devices
         loop {
             match self.input.try_recv() {
-                Ok(true) if self.state != State::Recording => {
-                    self.state = State::Recording;
-                }
-                Ok(false) if self.state == State::Recording => {
-                    self.state = State::Processing;
-                }
+                Ok(true) if self.state != State::Recording => self.state = State::Recording,
+                Ok(false) if self.state == State::Recording => self.state = State::Hidden,
                 Ok(_) => {}
                 Err(_) => break,
             }
         }
 
-        // Poll audio device
-        if let Ok(text) = self.transcriber.poll() {
-            if !text.is_empty() {
-                self.transcribed_text.push_str(&text);
-            }
+        // Poll audio device and stream text via wtype
+        if let Ok(text) = self.transcriber.poll() && !text.is_empty() {
+            let _ = Command::new("wtype").arg(&text).spawn();
         }
 
         // Update based on state
@@ -77,21 +68,6 @@ impl eframe::App for App {
                         ui.painter().rect_filled(rect, rounding, BACKGROUND);
                         draw_waveform(ui, &rect, &levels, PRIMARY);
                     });
-            }
-            State::Processing => {
-                let rect = ui.available_rect_before_wrap();
-                let rounding = rect.height() / 2.0;
-                ui.painter().rect_filled(rect, rounding, BACKGROUND);
-                draw_processing(ui, &rect);
-                if !self.transcriber.has_pending() {
-                    let trimmed = self.transcribed_text.trim();
-                    if !trimmed.is_empty() {
-                        let _ = Command::new("wl-copy").arg(&trimmed).spawn();
-                        let _ = Command::new("wtype").args(["-M", "ctrl", "-k", "v", "-m", "ctrl"]).spawn();
-                        self.transcribed_text.clear();
-                    }
-                    self.state = State::Hidden;
-                }
             }
         }
     }
@@ -115,22 +91,5 @@ fn draw_waveform(ui: &mut egui::Ui, rect: &egui::Rect, levels: &[f32], color: eg
             egui::vec2(bar_w, h),
         );
         ui.painter().rect_filled(bar_rect, bar_w / 2.0, color);
-    }
-}
-
-fn draw_processing(ui: &mut egui::Ui, rect: &egui::Rect) {
-    let dot_radius = 3.0;
-    let dot_gap = 8.0;
-    let total_w = 3.0 * dot_radius * 2.0 + 2.0 * dot_gap;
-    let start_x = rect.center().x - total_w / 2.0;
-    let center_y = rect.center().y;
-
-    for i in 0..3 {
-        let x = start_x + i as f32 * (dot_radius * 2.0 + dot_gap) + dot_radius;
-        let pulse = ((ui.ctx().input(|i| i.time) * 3.0 + i as f64 * 1.2).sin() + 1.0) / 2.0;
-        let alpha = (0.3 + pulse * 0.7) * 255.0;
-        let color = egui::Color32::from_rgba_unmultiplied(0xC2, 0xFF, 0x50, alpha as u8);
-        ui.painter()
-            .circle_filled(egui::pos2(x, center_y), dot_radius, color);
     }
 }
