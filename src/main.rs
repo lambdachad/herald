@@ -6,6 +6,7 @@ fn main() -> eframe::Result {
             .with_inner_size([180.0, 60.0])
             .with_resizable(false)
             .with_transparent(true)
+            .with_app_id("herald")
             .with_always_on_top(),
         ..Default::default()
     };
