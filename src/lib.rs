@@ -62,12 +62,14 @@ impl eframe::App for App {
                 self.transcribed_text.push_str(&text);
             }
         }
-
+        
         // Update based on state
+        ui.ctx().request_repaint();
         match self.state {
-            State::Hidden => self.transcriber.drain(),
+            State::Hidden => {
+                self.transcriber.drain()
+            }
             State::Recording => {
-                ui.ctx().request_repaint();
                 let levels = self.transcriber.levels();
                 egui::CentralPanel::default()
                     .frame(egui::Frame::new().inner_margin(egui::Margin::ZERO))
@@ -79,7 +81,6 @@ impl eframe::App for App {
                     });
             }
             State::Processing => {
-                ui.ctx().request_repaint();
                 let rect = ui.available_rect_before_wrap();
                 let rounding = rect.height() / 2.0;
                 ui.painter().rect_filled(rect, rounding, BACKGROUND);
