@@ -1,4 +1,5 @@
 // Modules
+pub mod app;
 pub mod transcribe;
 
 // Exports
