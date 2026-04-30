@@ -24,7 +24,11 @@ pub fn listen_keys() -> Receiver<bool> {
                     && (event.code() == KeyCode::KEY_LEFTMETA.0
                         || event.code() == KeyCode::KEY_RIGHTMETA.0)
                 {
-                    let _ = tx.send(event.value() == 1);
+                    let _ = tx.send(match event.value() {
+                        1 => true,
+                        0 => false,
+                        _ => continue,
+                    });
                 }
             }
         });

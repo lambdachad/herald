@@ -4,6 +4,7 @@ use herald::{input, transcribe::Transcriber, App, Result};
 fn main() -> Result<()> {
     // Setup
     let transcriber = Transcriber::new()?;
+    println!("Finishied loading model.");
     let input = input::listen_keys();
 
     // Start eGUI app

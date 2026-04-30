@@ -19,50 +19,50 @@ type Levels = Arc<Mutex<Vec<f32>>>;
 
 pub struct Transcriber {
     model: Nemotron,
-    stream: Option<Stream>,
-    audio_rx: Option<Receiver<Vec<f32>>>,
+    _stream: Stream,
+    audio_rx: Receiver<Vec<f32>>,
     buffer: Vec<f32>,
     levels: Levels,
 }
 
 impl Transcriber {
+    /// Load model and start audio capture (runs continuously).
     pub fn new() -> Result<Self> {
         let model = Nemotron::from_pretrained(MODEL_DIR, None)?;
+        let levels = Arc::new(Mutex::new(vec![0.0; NUM_BARS]));
+        let (stream, receiver) = open_input_stream(levels.clone())?;
+        stream.play()?;
         Ok(Self {
             model,
-            stream: None,
-            audio_rx: None,
+            _stream: stream,
+            audio_rx: receiver,
             buffer: Vec::with_capacity(CHUNK_SAMPLES * 4),
-            levels: Arc::new(Mutex::new(vec![0.0; NUM_BARS])),
+            levels,
         })
     }
 
-    pub fn start_capture(&mut self) -> Result<()> {
-        let (stream, receiver) = open_input_stream(self.levels.clone())?;
-        stream.play()?;
-        self.stream = Some(stream);
-        self.audio_rx = Some(receiver);
-        self.buffer.clear();
-        Ok(())
-    }
-
-    pub fn stop_capture(&mut self) {
-        self.stream = None;
-        self.audio_rx = None;
-        if let Ok(mut levels) = self.levels.lock() {
-            levels.iter_mut().for_each(|v| *v = 0.0);
+    /// Drain pending audio without transcribing. Keeps channel clear, saves CPU.
+    pub fn drain(&mut self) {
+        loop {
+            match self.audio_rx.try_recv() {
+                Ok(samples) => self.buffer.extend_from_slice(&samples),
+                Err(_) => break,
+            }
         }
+        // Drop accumulated audio so we don't transcribe old data when becoming visible
+        self.buffer.clear();
     }
 
+    /// Drain pending audio and transcribe all complete chunks.
+    /// Returns any newly recognized text.
     pub fn poll(&mut self) -> Result<String> {
-        // Drain all pending audio without blocking
         let mut output = String::new();
-        if let Some(rx) = &self.audio_rx {
-            loop {
-                match rx.try_recv() {
-                    Ok(samples) => self.buffer.extend_from_slice(&samples),
-                    Err(_) => break,
-                }
+
+        // Drain all pending audio without blocking
+        loop {
+            match self.audio_rx.try_recv() {
+                Ok(samples) => self.buffer.extend_from_slice(&samples),
+                Err(_) => break,
             }
         }
 
@@ -170,6 +170,7 @@ where
                     }
                 }
             }
+
             let _ = sender.send(mono);
         },
         |err| eprintln!("Audio error: {err}"),

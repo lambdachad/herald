@@ -16,7 +16,7 @@ const PRIMARY: egui::Color32 = egui::Color32::from_rgb(0xC2, 0xFF, 0x50);
 pub type Result<T, E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
 pub struct App {
-    capturing: bool,
+    visible: bool,
     input: Receiver<bool>,
     transcriber: Transcriber,
 }
@@ -26,7 +26,7 @@ impl App {
         Self {
             transcriber,
             input,
-            capturing: false,
+            visible: false,
         }
     }
 }
@@ -40,21 +40,15 @@ impl eframe::App for App {
         // Process input events from devices
         loop {
             match self.input.try_recv() {
-                Ok(true) if !self.capturing => {
-                    self.capturing = true;
-                    let _ = self.transcriber.start_capture();
-                }
-                Ok(false) if !self.capturing => {
-                    self.transcriber.stop_capture();
-                    self.capturing = false;
-                }
+                Ok(true) if !self.visible => self.visible = true,
+                Ok(false) if self.visible => self.visible = false,
                 Ok(_) => {}
                 Err(_) => break,
             }
         }
 
-        // Poll transcriber and print text
-        if self.capturing {
+        if self.visible {
+            // Poll audio device
             match self.transcriber.poll() {
                 Ok(text) if !text.is_empty() => {
                     print!("{text}");
@@ -63,11 +57,9 @@ impl eframe::App for App {
                 Err(e) => eprintln!("Transcription error: {e}"),
                 _ => {}
             }
-        }
 
-        // Draw pill with waveform
-        ui.ctx().request_repaint();
-        if self.capturing {
+            // Render UI
+            ui.ctx().request_repaint();
             let levels = self.transcriber.levels();
             egui::CentralPanel::default()
                 .frame(egui::Frame::new().inner_margin(egui::Margin::ZERO))
@@ -77,6 +69,9 @@ impl eframe::App for App {
                     ui.painter().rect_filled(rect, rounding, BACKGROUND);
                     draw_waveform(ui, &rect, &levels, PRIMARY);
                 });
+        } else {
+            // Drain audio stream 
+            self.transcriber.drain();
         }
     }
 }
