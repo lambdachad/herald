@@ -10,7 +10,7 @@ use std::sync::{
 };
 
 // Nemotron
-const MODEL_DIR: &str = "nemotron-speech-streaming-en-0.6b-int4";
+const MODEL_DIR: &str = "nemotron-speech-streaming-en-0.6b";
 const TARGET_HZ: u32 = 16_000;
 const CHUNK_SAMPLES: usize = 8_960; // 560ms at 16 kHz
 const NUM_BARS: usize = 10;

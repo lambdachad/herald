@@ -3,7 +3,6 @@ use herald::{Result, app::App, transcribe::Transcriber};
 
 fn main() -> Result<()> {
     // Load model and start audio capture
-    eprintln!("Loading model...");
     let mut transcriber = Transcriber::new()?;
     transcriber.start_capture()?;
     let levels = transcriber.levels();
